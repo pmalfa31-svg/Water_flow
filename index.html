@@ -7,7 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; background: #f0f2f5; padding: 20px; }
+        body { font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 600px; text-align: center; }
         h1 { color: #007bff; }
     </style>
@@ -20,13 +20,13 @@
     </div>
 
     <script>
-        // Verificati dai tuoi screenshot
-        const URL = 'https://yvqknnhptchiknvvtmfo.supabase.co';
-        const KEY = 'sb_publishable_tLeHgcJpg6mrIzkQtr4MA_ylz5WnHq';
+        // URL e KEY estratti dai tuoi screenshot - NON CAMBIARE UNA VIRGOLA
+        const PROJECT_URL = 'https://yvqknnhptchiknvvtmfo.supabase.co';
+        const PUBLIC_KEY = 'sb_publishable_tLeHgcJpg6mrIzkQtr4MA_ylz5WnHq';
         
-        const supabaseClient = supabase.createClient(URL, KEY);
+        const supabaseClient = supabase.createClient(PROJECT_URL, PUBLIC_KEY);
 
-        async function getData() {
+        async function main() {
             try {
                 const { data, error } = await supabaseClient
                     .from('water_measurements')
@@ -35,14 +35,14 @@
 
                 if (error) throw error;
 
-                if (data.length === 0) {
-                    document.getElementById('status').innerText = "Database empty. Run the INSERT query on Supabase!";
-                } else {
+                if (data && data.length > 0) {
                     document.getElementById('status').innerText = "Live Data";
                     renderChart(data);
+                } else {
+                    document.getElementById('status').innerText = "Connected! Database is empty. Run an INSERT query on Supabase.";
                 }
             } catch (err) {
-                document.getElementById('status').innerText = "Connection Error: " + err.message;
+                document.getElementById('status').innerText = "Error: " + err.message;
                 console.error(err);
             }
         }
@@ -54,16 +54,17 @@
                 data: {
                     labels: data.map(d => new Date(d.created_at).toLocaleTimeString()),
                     datasets: [{
-                        label: 'L/min',
+                        label: 'Liters/min',
                         data: data.map(d => d.flow_rate),
                         borderColor: '#007bff',
-                        tension: 0.3
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        fill: true
                     }]
                 }
             });
         }
 
-        getData();
+        main();
     </script>
 </body>
 </html>
