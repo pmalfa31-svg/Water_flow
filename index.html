@@ -24,10 +24,10 @@
         // Supabase configuration
         const SUPABASE_URL = 'https://yvqknnhptchiknvvtmfo.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_tLecHgcJpg6mrIzkQtr4MA_ylz5WnHq';
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         async function fetchData() {
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('water_measurements')
                 .select('created_at, flow_rate')
                 .order('created_at', { ascending: true })
@@ -67,3 +67,4 @@
 </body>
 
 </html>
+
