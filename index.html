@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Monitor - Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: sans-serif; background: #f4f7f9; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 90%; max-width: 800px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px; }
+        h1 { color: #007bff; }
+        .status { margin-bottom: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Water Flow Dashboard 💧</h1>
+        <div id="status" class="status">Loading data...</div>
+        <canvas id="flowChart"></canvas>
+    </div>
+
+    <script>
+        // Supabase configuration
+        const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+        const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function fetchData() {
+            const { data, error } = await supabase
+                .from('water_measurements')
+                .select('created_at, flow_rate')
+                .order('created_at', { ascending: true })
+                .limit(50);
+
+            if (error) {
+                document.getElementById('status').innerText = "Error loading data";
+                console.error(error);
+            } else {
+                document.getElementById('status').innerText = "Real-time updates active";
+                renderChart(data);
+            }
+        }
+
+        function renderChart(data) {
+            const ctx = document.getElementById('flowChart').getContext('2d');
+            const labels = data.map(d => new Date(d.created_at).toLocaleTimeString());
+            const values = data.map(d => d.flow_rate);
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Flow Rate (L/min)',
+                        data: values,
+                        borderColor: '#007bff',
+                        fill: true,
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)'
+                    }]
+                }
+            });
+        }
+
+        fetchData();
+    </script>
+</body>
+</html>
