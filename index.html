@@ -3,70 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Water Monitor - Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Water Monitor</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f9; display: flex; justify-content: center; padding: 20px; }
-        .container { width: 100%; max-width: 800px; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        h1 { color: #007bff; text-align: center; }
-        .status { text-align: center; margin-bottom: 20px; font-weight: bold; color: #555; }
+        body { font-family: sans-serif; display: flex; justify-content: center; background: #f0f2f5; padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 600px; text-align: center; }
+        h1 { color: #007bff; }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="card">
         <h1>Water Flow Dashboard 💧</h1>
-        <div id="status" class="status">Connecting to Database...</div>
+        <p id="status">Connecting...</p>
         <canvas id="flowChart"></canvas>
     </div>
 
     <script>
-        // Data from your Supabase Project
-        const SB_URL = 'https://yvqknnhptchiknvvtmfo.supabase.co';
-        const SB_KEY = 'sb_publishable_tLeHgcJpg6mrIzkQtr4MA_ylz5WnHq';
+        // Verificati dai tuoi screenshot
+        const URL = 'https://yvqknnhptchiknvvtmfo.supabase.co';
+        const KEY = 'sb_publishable_tLeHgcJpg6mrIzkQtr4MA_ylz5WnHq';
         
-        // Use a unique name for the client to avoid Syntax Errors
-        const waterAppClient = supabase.createClient(SB_URL, SB_KEY);
+        const supabaseClient = supabase.createClient(URL, KEY);
 
-        async function fetchData() {
-            const { data, error } = await waterAppClient
-                .from('water_measurements')
-                .select('created_at, flow_rate')
-                .order('created_at', { ascending: true })
-                .limit(50);
+        async function getData() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('water_measurements')
+                    .select('created_at, flow_rate')
+                    .order('created_at', { ascending: true });
 
-            if (error) {
-                console.error("Supabase Error:", error);
-                document.getElementById('status').innerText = "Error: " + error.message;
-            } else {
-                document.getElementById('status').innerText = data.length > 0 ? "Live Data" : "Database is empty. Send some data!";
-                if (data.length > 0) renderChart(data);
+                if (error) throw error;
+
+                if (data.length === 0) {
+                    document.getElementById('status').innerText = "Database empty. Run the INSERT query on Supabase!";
+                } else {
+                    document.getElementById('status').innerText = "Live Data";
+                    renderChart(data);
+                }
+            } catch (err) {
+                document.getElementById('status').innerText = "Connection Error: " + err.message;
+                console.error(err);
             }
         }
 
         function renderChart(data) {
             const ctx = document.getElementById('flowChart').getContext('2d');
-            const labels = data.map(d => new Date(d.created_at).toLocaleTimeString());
-            const values = data.map(d => d.flow_rate);
-
             new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: labels,
+                    labels: data.map(d => new Date(d.created_at).toLocaleTimeString()),
                     datasets: [{
-                        label: 'Flow Rate (L/min)',
-                        data: values,
+                        label: 'L/min',
+                        data: data.map(d => d.flow_rate),
                         borderColor: '#007bff',
-                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                        fill: true,
-                        tension: 0.4
+                        tension: 0.3
                     }]
-                },
-                options: { responsive: true }
+                }
             });
         }
 
-        fetchData();
+        getData();
     </script>
 </body>
 </html>
