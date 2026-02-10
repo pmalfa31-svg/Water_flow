@@ -7,38 +7,40 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: sans-serif; background: #f4f7f9; display: flex; flex-direction: column; align-items: center; }
-        .container { width: 90%; max-width: 800px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px; }
-        h1 { color: #007bff; }
-        .status { margin-bottom: 20px; font-weight: bold; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f9; display: flex; justify-content: center; padding: 20px; }
+        .container { width: 100%; max-width: 800px; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        h1 { color: #007bff; text-align: center; }
+        .status { text-align: center; margin-bottom: 20px; font-weight: bold; color: #555; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Water Flow Dashboard 💧</h1>
-        <div id="status" class="status">Loading data...</div>
+        <div id="status" class="status">Connecting to Database...</div>
         <canvas id="flowChart"></canvas>
     </div>
 
     <script>
-        // Supabase configuration
-        const SUPABASE_URL = 'https://yvqknnhptchiknvvtmfo.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_tLecHgcJpg6mrIzkQtr4MA_ylz5WnHq';
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Data from your Supabase Project
+        const SB_URL = 'https://yvqknnhptchiknvvtmfo.supabase.co';
+        const SB_KEY = 'sb_publishable_tLeHgcJpg6mrIzkQtr4MA_ylz5WnHq';
+        
+        // Use a unique name for the client to avoid Syntax Errors
+        const waterAppClient = supabase.createClient(SB_URL, SB_KEY);
 
         async function fetchData() {
-            const { data, error } = await supabaseClient
+            const { data, error } = await waterAppClient
                 .from('water_measurements')
                 .select('created_at, flow_rate')
                 .order('created_at', { ascending: true })
                 .limit(50);
 
             if (error) {
-                document.getElementById('status').innerText = "Error loading data";
-                console.error(error);
+                console.error("Supabase Error:", error);
+                document.getElementById('status').innerText = "Error: " + error.message;
             } else {
-                document.getElementById('status').innerText = "Real-time updates active";
-                renderChart(data);
+                document.getElementById('status').innerText = data.length > 0 ? "Live Data" : "Database is empty. Send some data!";
+                if (data.length > 0) renderChart(data);
             }
         }
 
@@ -55,16 +57,16 @@
                         label: 'Flow Rate (L/min)',
                         data: values,
                         borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
                         fill: true,
-                        backgroundColor: 'rgba(0, 123, 255, 0.1)'
+                        tension: 0.4
                     }]
-                }
+                },
+                options: { responsive: true }
             });
         }
 
         fetchData();
     </script>
 </body>
-
 </html>
-
