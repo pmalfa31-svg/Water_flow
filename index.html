@@ -30,6 +30,12 @@
 
     <h2>Hourly Flow Consumption</h2>
     <canvas id="chartHourly"></canvas>
+
+    <div style="text-align: center; margin-bottom: 20px;">
+        <button id="exportBtn" onclick="exportToCSV()" style="padding: 10px 20px; background-color: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">
+            📥 Export Database to CSV
+        </button>
+    </div>
 </div>
 
 <script>
@@ -38,6 +44,73 @@
     const PUBLIC_KEY = "sb_publishable_tLecHgcJpg6mrIzkQtr4MA_ylz5WnHq"; //
     const supabaseClient = supabase.createClient(PROJECT_URL, PUBLIC_KEY);
 
+
+    /**
+ * Fetches all data from Supabase and triggers a CSV download
+ */
+async function exportToCSV() {
+    const btn = document.getElementById('exportBtn');
+    const originalText = btn.innerText;
+    
+    try {
+        btn.innerText = "Generating CSV...";
+        btn.disabled = true;
+
+        // Fetching all records from the table
+        const { data, error } = await supabaseClient
+            .from('water_measurements')
+            .select('*')
+            .order('date', { ascending: false }); //
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            alert("No data available to export.");
+            return;
+        }
+
+        // Define CSV headers based on your DB columns
+        const headers = [
+            "ID", "Date", "Total Flow (L)", 
+            "5min", "10min", "15min", "20min", "25min", "30min", 
+            "35min", "40min", "45min", "50min", "55min", "60min"
+        ];
+
+        // Map data rows to CSV format
+        const csvRows = data.map(row => [
+            row.id,
+            new Date(row.date).toLocaleString('it-IT'), //
+            row.flow_rate,
+            row['5min'], row['10min'], row['15min'], row['20min'], 
+            row['25min'], row['30min'], row['35min'], row['40min'], 
+            row['45min'], row['50min'], row['55min'], row['60min']
+        ].join(','));
+
+        // Combine headers and rows
+        const csvString = [headers.join(','), ...csvRows].join('\n');
+
+        // Create a blob and trigger download
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute("href", url);
+        link.setAttribute("download", `water_measurements_export_${new Date().toISOString().slice(0,10)}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+    } catch (err) {
+        alert("Export failed: " + err.message);
+        console.error(err);
+    } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
+}
+
+    
     /**
      * Fetches water measurements from Supabase
      */
@@ -133,6 +206,7 @@
 </script>
 </body>
 </html>
+
 
 
 
