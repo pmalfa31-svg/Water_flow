@@ -1,63 +1,80 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Water Flow Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f4f7f6; padding: 20px; }
-        .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        
+        /* Centered Main Title */
+        h1 { text-align: center; color: #333; margin-bottom: 30px; }
+        
         canvas { margin-bottom: 50px; }
-        h2 { color: #007bff; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        h2 { color: #007bff; border-bottom: 2px solid #eee; padding-bottom: 10px; font-weight: 500; }
+        
+        #status { text-align: center; color: #666; font-style: italic; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h1>Water Dashboard 💧</h1>
-    <p id="status">Caricamento dati...</p>
+    <p id="status">Loading data...</p>
 
-    <h2>5 minutes flow - last 24 hours</h2>
+    <h2>5 Minutes Flow - Last 24 Hours</h2>
     <canvas id="chart5min"></canvas>
 
-    <h2>Hourly flow consumption</h2>
+    <h2>Hourly Flow Consumption</h2>
     <canvas id="chartHourly"></canvas>
 </div>
 
 <script>
-    const PROJECT_URL = "https://yvqknhhptchiknvvtmfo.supabase.co";
-    const PUBLIC_KEY = "sb_publishable_tLecHgcJpg6mrIzkQtr4MA_ylz5WnHq"; //
+    // Supabase Configuration (Corrected based on your ESP32 credentials)
+    const PROJECT_URL = "https://yvqknnhptchiknvvtmfo.supabase.co"; //
+    const PUBLIC_KEY = "sb_publishable_tLeHgcJpg6mrIzkQtr4MA_ylz5WnHq"; //
     const supabaseClient = supabase.createClient(PROJECT_URL, PUBLIC_KEY);
 
+    /**
+     * Fetches water measurements from Supabase
+     */
     async function fetchData() {
         try {
-            // Prendiamo i dati delle ultime 24 ore per il grafico dettagliato
-            // e fino a 720 records (1 mese) per quello orario
+            // Fetching up to 720 records (equivalent to 1 month of hourly data)
             const { data, error } = await supabaseClient
                 .from('water_measurements')
                 .select('*')
-                .order('date', { ascending: true })
+                .order('date', { ascending: true }) // Using the new 'date' column
                 .limit(720);
 
             if (error) throw error;
-            document.getElementById('status').innerText = "Dati aggiornati";
+
+            // Clear the status message once data is ready
+            document.getElementById('status').style.display = "none";
+            
             renderCharts(data);
         } catch (err) {
-            document.getElementById('status').innerText = "Errore: " + err.message;
+            document.getElementById('status').innerText = "Error: " + err.message;
+            console.error("Fetch error:", err);
         }
     }
 
+    /**
+     * Initializes and renders Chart.js visualizations
+     */
     function renderCharts(data) {
-        // --- 1. PREPARAZIONE GRAFICO 5 MINUTI ---
-        // Prendiamo solo le ultime 24 righe (ultime 24 ore)
+        // --- 1. PREPARING 5-MINUTE DETAILED CHART ---
+        // Selecting the last 24 rows for the detailed daily view
         const last24h = data.slice(-24);
         let labels5min = [];
         let values5min = [];
 
         last24h.forEach(row => {
             const hour = new Date(row.date).getHours();
-            // Cicliamo sulle 12 colonne da 5 minuti
+            // Iterate through the 12 columns (5min, 10min... 60min)
             for(let i=1; i<=12; i++) {
                 const min = (i-1) * 5;
                 const colName = (i*5) + "min";
@@ -66,32 +83,55 @@
             }
         });
 
+        // 5-Minute Line Chart
         new Chart(document.getElementById('chart5min'), {
             type: 'line',
             data: {
                 labels: labels5min,
-                datasets: [{ label: 'Litri / 5min', data: values5min, borderColor: '#28a745', tension: 0.1, fill: true }]
+                datasets: [{ 
+                    label: 'Liters / 5min', 
+                    data: values5min, 
+                    borderColor: '#28a745', 
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    tension: 0.3, 
+                    fill: true 
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'top' } }
             }
         });
 
-        // --- 2. PREPARAZIONE GRAFICO STORICO MENSILE ---
+        // --- 2. PREPARING MONTHLY HOURLY CHART ---
+        // Hourly Bar Chart (History)
         new Chart(document.getElementById('chartHourly'), {
-            type: 'bar', // Istogramma per lo storico mensile è più leggibile
+            type: 'bar',
             data: {
-                labels: data.map(d => new Date(d.date).toLocaleDateString() + " " + new Date(d.date).getHours() + ":00"),
-                datasets: [{ label: 'Consumo Orario Totale (L)', data: data.map(d => d.flow_rate), backgroundColor: '#007bff' }]
+                // Formatting labels to show date and hour
+                labels: data.map(d => {
+                    const dObj = new Date(d.date);
+                    return dObj.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }) + " " + dObj.getHours() + ":00";
+                }),
+                datasets: [{ 
+                    label: 'Total Hourly Consumption (L)', 
+                    data: data.map(d => d.flow_rate), 
+                    backgroundColor: '#007bff' 
+                }]
             },
-            options: { scales: { x: { display: false } } } // Nascondiamo le label x se sono troppe
+            options: { 
+                responsive: true,
+                scales: { 
+                    x: { display: false } // Hide X labels if too many records exist (1 month history)
+                } 
+            }
         });
     }
 
+    // Initial Trigger
     fetchData();
 </script>
 </body>
 </html>
-</html>
-
-
-
 
 
