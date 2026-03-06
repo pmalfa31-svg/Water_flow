@@ -131,8 +131,8 @@ void server_data_sending(uint32_t* data) {
         }
         
         http.end();
-
     }
+
     WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);
 }
@@ -160,37 +160,35 @@ void setup() {
 
         setup_ulp(); 
     } else {
-        // --- RISVEGLIO OGNI 5 MINUTI ---
+        // --- WAKE UP EVERY 5min ---
         
-        // 1. Leggi gli impulsi accumulati dall'ULP (solo i 16 bit bassi)
+        // 1. Read impulse from ulp (only 16 low bit)
         total_impulse = rtc_mem_ptr[ULP_COUNTER_INDEX] & 0xFFFF;
 
-        // 2. Reset immediato del contatore ULP per non perdere i nuovi impulsi
+        // 2. Immediate reset ULP counter
         rtc_mem_ptr[ULP_COUNTER_INDEX] = 0;
 
-        // 3. Salva nel buffer orario
+
         samples[samples_index] = total_impulse;
-        Serial.printf("Campione [%d/12] salvato: %u impulsi\n", samples_index + 1, total_impulse);
+        Serial.printf("Samples [%d/12] saved: %u impulse\n", samples_index + 1, total_impulse);
         
         samples_index++;
 
-        // 4. Se è passata un'ora (12 campioni da 5 min), invia a Supabase
-        // per provare metto 
+        // 3. Sent to database after 1 hour (12 samples)
         if (samples_index >= 12) {
             server_data_sending(samples);
-            // Reset indice dopo l'invio
+            // Reset index after sending
             samples_index = 0; 
         }
     }
 
-    // 5. Configura il prossimo risveglio (300 secondi)
-    // esp_sleep_enable_timer_wakeup(300ULL * 1000000ULL);
-    esp_sleep_enable_timer_wakeup(10ULL * 1000000ULL); // così sono ogni 10 secondi
-    // aggiornamento totale circa 2 minuti
+    // 4. Configuration next wake up (300s)
+    esp_sleep_enable_timer_wakeup(300ULL * 1000000ULL);
+    //esp_sleep_enable_timer_wakeup(10ULL * 1000000ULL); // debug every 10s
 
     
     Serial.println("Deep Sleep mode. ULP keep couting...");
-    Serial.flush(); // Assicura che il messaggio venga inviato prima del sonno
+    Serial.flush(); // Assure message sent before sleep
     esp_deep_sleep_start();
 }
 
